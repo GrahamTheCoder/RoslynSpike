@@ -19,23 +19,19 @@ namespace CodeRefactoring1
 
         public async Task<IEnumerable<CodeAction>> GetRefactoringsAsync(Document document, TextSpan textSpan, CancellationToken cancellationToken)
         {
-            // TODO: Replace the following code with your own analysis, generating a CodeAction for each refactoring to offer
+            var typeDecl = await GetCurrentNode<TypeDeclarationSyntax>(document, textSpan, cancellationToken);
+            return typeDecl == null ? null :  new[] { GetAction(document, typeDecl) };
+        }
 
+        private CodeAction GetAction(Document document, TypeDeclarationSyntax typeDecl)
+        {
+            return CodeAction.Create("Reverse type name", c => ReverseTypeNameAsync(document, typeDecl, c));
+        }
+
+        private async Task<T> GetCurrentNode<T>(Document document, TextSpan textSpan, CancellationToken cancellationToken) where T : class
+        {
             var root = await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false);
-            var node = root.FindNode(textSpan);
-
-            // Only offer a refactoring if the selected node is a type declaration node.
-            var typeDecl = node as TypeDeclarationSyntax;
-            if (typeDecl == null)
-            {
-                return null;
-            }
-
-            // For any type declaration node, create a code action to reverse the identifier text.
-            var action = CodeAction.Create("Reverse type name", c => ReverseTypeNameAsync(document, typeDecl, c));
-
-            // Return this code action.
-            return new[] { action };
+            return root.FindNode(textSpan) as T;
         }
 
         private async Task<Solution> ReverseTypeNameAsync(Document document, TypeDeclarationSyntax typeDecl, CancellationToken cancellationToken)
