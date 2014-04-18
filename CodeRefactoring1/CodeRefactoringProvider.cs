@@ -45,7 +45,7 @@ namespace CodeRefactoring1
             var originalSolution = document.Project.Solution;
             INamedTypeSymbol classTypeSymbol = semanticModel.GetDeclaredSymbol(declaringClass, cancellationToken);
             IFieldSymbol newField = CodeGenerationSymbolFactory.CreateFieldSymbol(new List<AttributeData>(), new Accessibility(), new SymbolModifiers(), classTypeSymbol, "myNewField", initializer: expression);
-            return await CodeGenerator.AddFieldDeclarationAsync(document.Project.Solution, classTypeSymbol, newField, cancellationToken: cancellationToken).ConfigureAwait(false);
+            return await CodeGenerator.AddFieldDeclarationAsync(originalSolution, classTypeSymbol, newField).ConfigureAwait(false);
         }
     }
 }
