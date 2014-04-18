@@ -32,19 +32,20 @@ namespace CodeRefactoring1
 
         private CodeAction GetAction(Document document, ExpressionSyntax typeDecl)
         {
-            return CodeAction.Create("Extract variable", c => DeclareField(document, typeDecl, c));
+            return CodeAction.Create("Help extract a field", c => DeclareField(document, typeDecl, c));
         }
 
         private async Task<Document> DeclareField(Document document, ExpressionSyntax expression, CancellationToken cancellationToken)
         {
             // Get the symbol representing the type to be renamed.
             var semanticModel = await document.GetSemanticModelAsync(cancellationToken);
-            var declaringClass = expression.Parent.FirstAncestorOrSelf<ClassDeclarationSyntax>();
 
             // Produce a new solution that has all references to that type renamed, including the declaration.
             var originalSolution = document.Project.Solution;
-            INamedTypeSymbol classTypeSymbol = semanticModel.GetDeclaredSymbol(declaringClass, cancellationToken);
-            IFieldSymbol newField = CodeGenerationSymbolFactory.CreateFieldSymbol(new List<AttributeData>(), new Accessibility(), new SymbolModifiers(), classTypeSymbol, "myNewField", initializer: expression);
+            var expressionTypeInfo = semanticModel.GetTypeInfo(expression);
+            
+            INamedTypeSymbol classTypeSymbol = semanticModel.GetEnclosingSymbol(expression.SpanStart).ContainingType;
+            IFieldSymbol newField = CodeGenerationSymbolFactory.CreateFieldSymbol(new List<AttributeData>(), new Accessibility(), new SymbolModifiers(), expressionTypeInfo.Type, "myNewField", initializer: expression);
             return await CodeGenerator.AddFieldDeclarationAsync(originalSolution, classTypeSymbol, newField).ConfigureAwait(false);
         }
     }
