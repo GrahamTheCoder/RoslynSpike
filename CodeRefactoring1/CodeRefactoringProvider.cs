@@ -9,23 +9,19 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Rename;
 using Microsoft.CodeAnalysis.Text;
+using Microsoft.CodeAnalysis.CodeGeneration;
 
 namespace CodeRefactoring1
 {
-    [ExportCodeRefactoringProvider(CodeRefactoringProvider.RefactoringId, LanguageNames.CSharp)]
+    [ExportCodeRefactoringProvider(RefactoringId, LanguageNames.CSharp)]
     internal class CodeRefactoringProvider : ICodeRefactoringProvider
     {
         public const string RefactoringId = "CodeRefactoring1";
 
         public async Task<IEnumerable<CodeAction>> GetRefactoringsAsync(Document document, TextSpan textSpan, CancellationToken cancellationToken)
         {
-            var typeDecl = await GetCurrentNode<TypeDeclarationSyntax>(document, textSpan, cancellationToken);
+            var typeDecl = await GetCurrentNode<ExpressionSyntax>(document, textSpan, cancellationToken);
             return typeDecl == null ? null :  new[] { GetAction(document, typeDecl) };
-        }
-
-        private CodeAction GetAction(Document document, TypeDeclarationSyntax typeDecl)
-        {
-            return CodeAction.Create("Reverse type name", c => ReverseTypeNameAsync(document, typeDecl, c));
         }
 
         private async Task<T> GetCurrentNode<T>(Document document, TextSpan textSpan, CancellationToken cancellationToken) where T : class
@@ -34,23 +30,22 @@ namespace CodeRefactoring1
             return root.FindNode(textSpan) as T;
         }
 
-        private async Task<Solution> ReverseTypeNameAsync(Document document, TypeDeclarationSyntax typeDecl, CancellationToken cancellationToken)
+        private CodeAction GetAction(Document document, ExpressionSyntax typeDecl)
         {
-            // Produce a reversed version of the type declaration's identifier token.
-            var identifierToken = typeDecl.Identifier;
-            var newName = new string(identifierToken.Text.Reverse().ToArray());
+            return CodeAction.Create("Extract variable", c => DeclareField(document, typeDecl, c));
+        }
 
+        private async Task<Document> DeclareField(Document document, ExpressionSyntax expression, CancellationToken cancellationToken)
+        {
             // Get the symbol representing the type to be renamed.
             var semanticModel = await document.GetSemanticModelAsync(cancellationToken);
-            var typeSymbol = semanticModel.GetDeclaredSymbol(typeDecl, cancellationToken);
+            var typeSymbol = semanticModel.GetDeclaredSymbol(expression, cancellationToken);
 
             // Produce a new solution that has all references to that type renamed, including the declaration.
             var originalSolution = document.Project.Solution;
-            var optionSet = originalSolution.Workspace.GetOptions();
-            var newSolution = await Renamer.RenameSymbolAsync(document.Project.Solution, typeSymbol, newName, optionSet, cancellationToken).ConfigureAwait(false);
-
-            // Return the new solution with the now-uppercase type name.
-            return newSolution;
+            INamedTypeSymbol typeSymbol1 = (INamedTypeSymbol)typeSymbol;
+            IFieldSymbol newField = CodeGenerationSymbolFactory.CreateFieldSymbol(new List<AttributeData>(), new Accessibility(), new SymbolModifiers(), typeSymbol1, "myNewField", initializer: expression);
+            return await CodeGenerator.AddFieldDeclarationAsync(document.Project.Solution, typeSymbol1, newField, cancellationToken: cancellationToken).ConfigureAwait(false);
         }
     }
 }
