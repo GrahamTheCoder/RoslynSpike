@@ -39,13 +39,13 @@ namespace CodeRefactoring1
         {
             // Get the symbol representing the type to be renamed.
             var semanticModel = await document.GetSemanticModelAsync(cancellationToken);
-            var typeSymbol = semanticModel.GetDeclaredSymbol(expression, cancellationToken);
+            var declaringClass = expression.Parent.FirstAncestorOrSelf<ClassDeclarationSyntax>();
 
             // Produce a new solution that has all references to that type renamed, including the declaration.
             var originalSolution = document.Project.Solution;
-            INamedTypeSymbol typeSymbol1 = (INamedTypeSymbol)typeSymbol;
-            IFieldSymbol newField = CodeGenerationSymbolFactory.CreateFieldSymbol(new List<AttributeData>(), new Accessibility(), new SymbolModifiers(), typeSymbol1, "myNewField", initializer: expression);
-            return await CodeGenerator.AddFieldDeclarationAsync(document.Project.Solution, typeSymbol1, newField, cancellationToken: cancellationToken).ConfigureAwait(false);
+            INamedTypeSymbol classTypeSymbol = semanticModel.GetDeclaredSymbol(declaringClass, cancellationToken);
+            IFieldSymbol newField = CodeGenerationSymbolFactory.CreateFieldSymbol(new List<AttributeData>(), new Accessibility(), new SymbolModifiers(), classTypeSymbol, "myNewField", initializer: expression);
+            return await CodeGenerator.AddFieldDeclarationAsync(document.Project.Solution, classTypeSymbol, newField, cancellationToken: cancellationToken).ConfigureAwait(false);
         }
     }
 }
