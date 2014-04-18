@@ -45,7 +45,7 @@ namespace CodeRefactoring1
             var expressionTypeInfo = semanticModel.GetTypeInfo(expression);
             
             INamedTypeSymbol classTypeSymbol = semanticModel.GetEnclosingSymbol(expression.SpanStart).ContainingType;
-            IFieldSymbol newField = CodeGenerationSymbolFactory.CreateFieldSymbol(new List<AttributeData>(), new Accessibility(), new SymbolModifiers(), expressionTypeInfo.Type, "myNewField", initializer: expression);
+            IFieldSymbol newField = CodeGenerationSymbolFactory.CreateFieldSymbol(new List<AttributeData>(), Accessibility.Private, new SymbolModifiers(), expressionTypeInfo.Type, "myNewField", initializer: expression);
             return await CodeGenerator.AddFieldDeclarationAsync(originalSolution, classTypeSymbol, newField).ConfigureAwait(false);
         }
     }
