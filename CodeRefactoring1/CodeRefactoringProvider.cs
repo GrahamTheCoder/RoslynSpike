@@ -10,6 +10,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Rename;
 using Microsoft.CodeAnalysis.Text;
 using Microsoft.CodeAnalysis.CodeGeneration;
+using System;
 
 namespace CodeRefactoring1
 {
@@ -43,7 +44,11 @@ namespace CodeRefactoring1
 
             var originalSolution = document.Project.Solution;
             INamedTypeSymbol classTypeSymbol = GetClassTypeSymbol(expression, semanticModel);
-            return await CodeGenerator.AddFieldDeclarationAsync(originalSolution, classTypeSymbol, newField).ConfigureAwait(false);
+            var expressionReplaces = new ExpressionReplacer(semanticModel.SyntaxTree, document, semanticModel);
+            var withReplacement = expressionReplaces.GetReplacementNode(expression, fieldName, cancellationToken);
+            var documentWithField = await CodeGenerator.AddFieldDeclarationAsync(originalSolution, classTypeSymbol, newField).ConfigureAwait(false);
+            return document.WithSyntaxRoot(withReplacement);
+
         }
 
         private static INamedTypeSymbol GetClassTypeSymbol(ExpressionSyntax expression, SemanticModel semanticModel)
@@ -58,9 +63,38 @@ namespace CodeRefactoring1
             return newField;
         }
 
+
         private static string GetNewFieldName()
         {
             return "myNewField";
+        }
+    }
+
+    public class ExpressionReplacer
+    {
+        private SyntaxTree syntaxTree;
+        private Document document;
+        private SemanticModel semanticModel;
+
+        public ExpressionReplacer(SyntaxTree syntaxTree, Document document, SemanticModel semanticModel)
+        {
+            this.syntaxTree = syntaxTree;
+            this.document = document;
+            this.semanticModel = semanticModel;
+        }
+
+        public SyntaxNode GetReplacementNode(ExpressionSyntax binaryExpression, string replaceWith, CancellationToken cancellationToken)
+        {
+            binaryExpression.Parent.ReplaceNode(binaryExpression, binaryExpression);
+            var newExpression = GetNewNode(replaceWith).
+                WithLeadingTrivia(binaryExpression.GetLeadingTrivia()).
+                WithTrailingTrivia(binaryExpression.GetTrailingTrivia());
+            return syntaxTree.GetRoot().ReplaceNode(binaryExpression, newExpression);
+        }
+
+        private SyntaxNode GetNewNode(string replaceWith)
+        {
+            return SyntaxFactory.ParseSyntaxTree(replaceWith).GetRoot();
         }
     }
 }
