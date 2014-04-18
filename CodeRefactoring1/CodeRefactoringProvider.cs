@@ -20,8 +20,8 @@ namespace CodeRefactoring1
 
         public async Task<IEnumerable<CodeAction>> GetRefactoringsAsync(Document document, TextSpan textSpan, CancellationToken cancellationToken)
         {
-            var typeDecl = await GetCurrentNode<ExpressionSyntax>(document, textSpan, cancellationToken);
-            return typeDecl == null ? null :  new[] { GetAction(document, typeDecl) };
+            var syntaxNode = await GetCurrentNode<ExpressionSyntax>(document, textSpan, cancellationToken);
+            return syntaxNode == null ? null :  new[] { GetAction(document, syntaxNode) };
         }
 
         private async Task<T> GetCurrentNode<T>(Document document, TextSpan textSpan, CancellationToken cancellationToken) where T : class
