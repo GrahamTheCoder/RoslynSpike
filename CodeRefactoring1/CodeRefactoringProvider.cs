@@ -32,21 +32,30 @@ namespace CodeRefactoring1
 
         private CodeAction GetAction(Document document, ExpressionSyntax typeDecl)
         {
-            return CodeAction.Create("Help extract a field", c => DeclareField(GetNewFieldName(), typeDecl, document, c));
+            return CodeAction.Create("Help extract a field", c => ExtractField(GetNewFieldName(), typeDecl, document, c));
         }
 
-        private async Task<Document> DeclareField(string fieldName, ExpressionSyntax expression, Document document, CancellationToken cancellationToken)
+        private async Task<Document> ExtractField(string fieldName, ExpressionSyntax expression, Document document, CancellationToken cancellationToken)
         {
-            // Get the symbol representing the type to be renamed.
             var semanticModel = await document.GetSemanticModelAsync(cancellationToken);
 
-            // Produce a new solution that has all references to that type renamed, including the declaration.
-            var originalSolution = document.Project.Solution;
-            var expressionTypeInfo = semanticModel.GetTypeInfo(expression);
+            var newField = CreateFieldFromExpression(fieldName, expression, semanticModel);
 
-            INamedTypeSymbol classTypeSymbol = semanticModel.GetEnclosingSymbol(expression.SpanStart).ContainingType;
-            IFieldSymbol newField = CodeGenerationSymbolFactory.CreateFieldSymbol(new List<AttributeData>(), Accessibility.Private, new SymbolModifiers(), expressionTypeInfo.Type, fieldName, initializer: expression);
+            var originalSolution = document.Project.Solution;
+            INamedTypeSymbol classTypeSymbol = GetClassTypeSymbol(expression, semanticModel);
             return await CodeGenerator.AddFieldDeclarationAsync(originalSolution, classTypeSymbol, newField).ConfigureAwait(false);
+        }
+
+        private static INamedTypeSymbol GetClassTypeSymbol(ExpressionSyntax expression, SemanticModel semanticModel)
+        {
+            return semanticModel.GetEnclosingSymbol(expression.SpanStart).ContainingType;
+        }
+
+        private IFieldSymbol CreateFieldFromExpression(string fieldName, ExpressionSyntax expression, SemanticModel semanticModel)
+        {
+            var expressionTypeInfo = semanticModel.GetTypeInfo(expression);
+            IFieldSymbol newField = CodeGenerationSymbolFactory.CreateFieldSymbol(new List<AttributeData>(), Accessibility.Private, new SymbolModifiers(), expressionTypeInfo.Type, fieldName, initializer: expression);
+            return newField;
         }
 
         private static string GetNewFieldName()
