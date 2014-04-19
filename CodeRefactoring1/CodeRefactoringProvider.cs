@@ -66,7 +66,7 @@ namespace CodeRefactoring1
 
         private static string GetNewFieldName(string expressionText)
         {
-            var expressionTextName = new String(expressionText.ToLower().Where(c => c >= 'a' && c <= 'z').ToArray());
+            var expressionTextName = new String(expressionText.ToLower().Where(char.IsLetter).ToArray());
             return expressionTextName.Any() ? expressionTextName : "newField";
         }
     }
