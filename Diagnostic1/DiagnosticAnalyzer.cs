@@ -15,8 +15,8 @@ namespace Diagnostic1
     public class DiagnosticAnalyzer : ISymbolAnalyzer
     {
         internal const string DiagnosticId = "Diagnoser";
-        internal const string Description = "Type name contains lowercase letters";
-        internal const string MessageFormat = "Type name '{0}' contains lowercase letters";
+        internal const string Description = "Class name does not match file name";
+        internal const string MessageFormat = "Type name '{0}' does not match filename '{1}'";
         internal const string Category = "Naming";
 
         internal static DiagnosticDescriptor Rule = new DiagnosticDescriptor(DiagnosticId, Description, MessageFormat, Category, DiagnosticSeverity.Warning);

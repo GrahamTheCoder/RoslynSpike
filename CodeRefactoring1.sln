@@ -3,9 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2013
 VisualStudioVersion = 12.0.30110.0
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CodeRefactoring1", "CodeRefactoring1\CodeRefactoring1.csproj", "{DCD3BDED-E209-47B8-B4D2-CE0150DDDDE0}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ExtractRefactors", "CodeRefactoring1\ExtractRefactors.csproj", "{DCD3BDED-E209-47B8-B4D2-CE0150DDDDE0}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Diagnostic1", "Diagnostic1\Diagnostic1.csproj", "{5DDA3361-A743-4095-9162-EF6297024985}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ExtractDiagnostics", "Diagnostic1\ExtractDiagnostics.csproj", "{5DDA3361-A743-4095-9162-EF6297024985}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
