@@ -10,6 +10,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Rename;
 using Microsoft.CodeAnalysis.Text;
 using Microsoft.CodeAnalysis.CodeGeneration;
+using Microsoft.CodeAnalysis.CSharp.CodeGeneration;
 using System;
 
 namespace CodeRefactoring1
@@ -31,9 +32,9 @@ namespace CodeRefactoring1
             return root.FindNode(textSpan) as T;
         }
 
-        private CodeAction GetAction(Document document, ExpressionSyntax typeDecl)
+        private CodeAction GetAction(Document document, ExpressionSyntax expression)
         {
-            return CodeAction.Create("Help extract a field", c => ExtractField(GetNewFieldName(), typeDecl, document, c));
+            return CodeAction.Create("Extract field", c => ExtractField(GetNewFieldName(expression.GetText().ToString()), expression, document, c));
         }
 
         private async Task<Document> ExtractField(string fieldName, ExpressionSyntax expression, Document document, CancellationToken cancellationToken)
@@ -45,10 +46,9 @@ namespace CodeRefactoring1
             var originalSolution = document.Project.Solution;
             INamedTypeSymbol classTypeSymbol = GetClassTypeSymbol(expression, semanticModel);
             var expressionReplaces = new ExpressionReplacer(semanticModel.SyntaxTree, document, semanticModel);
-            var withReplacement = expressionReplaces.GetReplacementNode(expression, fieldName, cancellationToken);
-            var documentWithField = await CodeGenerator.AddFieldDeclarationAsync(originalSolution, classTypeSymbol, newField).ConfigureAwait(false);
-            return document.WithSyntaxRoot(withReplacement);
-
+            var withReplacement = expressionReplaces.WithReplacementNode(expression, fieldName, cancellationToken);
+            var documentWithReplacement = document.WithSyntaxRoot(withReplacement);
+            return await CodeGenerator.AddFieldDeclarationAsync(documentWithReplacement.Project.Solution, classTypeSymbol, newField).ConfigureAwait(false);
         }
 
         private static INamedTypeSymbol GetClassTypeSymbol(ExpressionSyntax expression, SemanticModel semanticModel)
@@ -64,9 +64,10 @@ namespace CodeRefactoring1
         }
 
 
-        private static string GetNewFieldName()
+        private static string GetNewFieldName(string expressionText)
         {
-            return "myNewField";
+            var expressionTextName = new String(expressionText.ToLower().Where(c => c >= 'a' && c <= 'z').ToArray());
+            return expressionTextName.Any() ? expressionTextName : "newField";
         }
     }
 
@@ -83,18 +84,14 @@ namespace CodeRefactoring1
             this.semanticModel = semanticModel;
         }
 
-        public SyntaxNode GetReplacementNode(ExpressionSyntax binaryExpression, string replaceWith, CancellationToken cancellationToken)
+        public SyntaxNode WithReplacementNode(ExpressionSyntax binaryExpression, string replaceWith, CancellationToken cancellationToken)
         {
-            binaryExpression.Parent.ReplaceNode(binaryExpression, binaryExpression);
-            var newExpression = GetNewNode(replaceWith).
-                WithLeadingTrivia(binaryExpression.GetLeadingTrivia()).
-                WithTrailingTrivia(binaryExpression.GetTrailingTrivia());
-            return syntaxTree.GetRoot().ReplaceNode(binaryExpression, newExpression);
+            return syntaxTree.GetRoot().ReplaceNode(binaryExpression, GetNewNode(replaceWith));
         }
 
         private SyntaxNode GetNewNode(string replaceWith)
         {
-            return SyntaxFactory.ParseSyntaxTree(replaceWith).GetRoot();
+            return SyntaxFactory.ParseExpression(replaceWith);
         }
     }
 }
