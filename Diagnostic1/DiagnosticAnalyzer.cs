@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
@@ -32,10 +33,14 @@ namespace Diagnostic1
             var namedTypeSymbol = (INamedTypeSymbol)symbol;
 
             // Find just those named type symbols with names containing lowercase letters.
-            if (namedTypeSymbol.Name.Any(char.IsLower))
+            var symbolLocations = symbol.Locations.Where(s => s.IsInSource);
+            if (symbolLocations.Count() > 1) return;
+
+            var locationFilename = Path.GetFileNameWithoutExtension(symbolLocations.Single().GetLineSpan().Path);
+            if (namedTypeSymbol.Name != locationFilename)
             {
                 // For all such symbols, produce a diagnostic.
-                var diagnostic = Diagnostic.Create(Rule, namedTypeSymbol.Locations[0], namedTypeSymbol.Name);
+                var diagnostic = Diagnostic.Create(Rule, namedTypeSymbol.Locations[0], namedTypeSymbol.Name, locationFilename);
 
                 addDiagnostic(diagnostic);
             }

@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -15,6 +16,8 @@ namespace Diagnostic1
     [ExportCodeFixProvider(DiagnosticAnalyzer.DiagnosticId, LanguageNames.CSharp)]
     internal class CodeFixProvider : ICodeFixProvider
     {
+        private const bool RoslynBug857331Fixed = false;
+
         public IEnumerable<string> GetFixableDiagnosticIds()
         {
             return new[] { DiagnosticAnalyzer.DiagnosticId };
@@ -22,36 +25,60 @@ namespace Diagnostic1
 
         public async Task<IEnumerable<CodeAction>> GetFixesAsync(Document document, TextSpan span, IEnumerable<Diagnostic> diagnostics, CancellationToken cancellationToken)
         {
-            var root = await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false);
-
-            // TODO: Replace the following code with your own analysis, generating a CodeAction for each fix to suggest
-
-            var diagnosticSpan = diagnostics.First().Location.SourceSpan;
-
-            // Find the type declaration identified by the diagnostic.
-            var declaration = root.FindToken(diagnosticSpan.Start).Parent.AncestorsAndSelf().OfType<TypeDeclarationSyntax>().First();
-
-            // Return a code action that will invoke the fix.
-            return new[] { CodeAction.Create("Make uppercase", c => MakeUppercaseAsync(document, declaration, c)) };
+            return new[] { CodeAction.Create("Move to matching filename", document.Project.RemoveDocument(document.Id).Solution) };
         }
 
-        private async Task<Solution> MakeUppercaseAsync(Document document, TypeDeclarationSyntax typeDecl, CancellationToken cancellationToken)
+        private async Task<Solution> MoveToMatchingFileAsync(Document document, SyntaxNode syntaxTree, TypeDeclarationSyntax declaration, CancellationToken cancellationToken)
         {
-            // Compute new uppercase name.
-            var identifierToken = typeDecl.Identifier;
-            var newName = identifierToken.Text.ToUpperInvariant();
+            var otherTypeDeclarationsInFile = syntaxTree.DescendantNodes().Where(originalNode => TypeDeclarationOtherThan(declaration, originalNode)).ToList();
+            string newFilePath = GetNewFilePath(document, declaration);
+            var newDocumentSyntaxTree = GetNewDocumentSyntaxTree(syntaxTree, otherTypeDeclarationsInFile);
+            var newFile = document.Project.AddDocument(newFilePath, newDocumentSyntaxTree.GetText(), document.Folders);
+            var solutionWithClassRemoved = GetDocumentWithClassDeclarationRemoved(newFile.Project, document, syntaxTree, declaration, otherTypeDeclarationsInFile);
+            
+            return document.Project.RemoveDocument(document.Id).Solution;
+        }
 
-            // Get the symbol representing the type to be renamed.
-            var semanticModel = await document.GetSemanticModelAsync(cancellationToken);
-            var typeSymbol = semanticModel.GetDeclaredSymbol(typeDecl, cancellationToken);
+        private static SyntaxNode GetNewDocumentSyntaxTree(SyntaxNode syntaxTree, List<SyntaxNode> otherTypeDeclarationsInFile)
+        {
+            return syntaxTree.RemoveNodes(otherTypeDeclarationsInFile, SyntaxRemoveOptions.KeepNoTrivia);
+        }
 
-            // Produce a new solution that has all references to that type renamed, including the declaration.
-            var originalSolution = document.Project.Solution;
-            var optionSet = originalSolution.Workspace.GetOptions();
-            var newSolution = await Renamer.RenameSymbolAsync(document.Project.Solution, typeSymbol, newName, optionSet, cancellationToken).ConfigureAwait(false);
+        private static string GetNewFilePath(Document document, TypeDeclarationSyntax declaration)
+        {
+            var oldFilePath = document.FilePath;
+            var oldFileDirectory = Path.GetDirectoryName(document.FilePath);
+            var newFilePath = Path.Combine(oldFileDirectory, declaration.Identifier.Text + ".cs");
+            return newFilePath;
+        }
 
-            // Return the new solution with the now-uppercase type name.
-            return newSolution;
+        private static Solution GetDocumentWithClassDeclarationRemoved(Project project, Document document, SyntaxNode syntaxTree, TypeDeclarationSyntax declaration, IEnumerable<SyntaxNode> otherTypeDeclarationsInFile)
+        {
+            if (otherTypeDeclarationsInFile.Any() || !RoslynBug857331Fixed)
+            {
+                var newSyntaxTree = syntaxTree.RemoveNode(declaration, SyntaxRemoveOptions.KeepNoTrivia);
+                return document.WithSyntaxRoot(newSyntaxTree).Project.Solution;
+            }
+            else
+            {
+                var emptyDocumentId = document.Id;
+                if (project.Solution.GetDocument(emptyDocumentId) != null)
+                {
+                    var projectWithFileRemoved = project.Solution.RemoveDocument(emptyDocumentId);
+                    return projectWithFileRemoved;
+                }
+                return project.Solution;
+            }
+        }
+
+        private static bool TypeDeclarationOtherThan(TypeDeclarationSyntax declaration, SyntaxNode originalNode)
+        {
+            return IsTypeDeclaration(originalNode) && originalNode != declaration;
+        }
+
+        private static bool IsTypeDeclaration(SyntaxNode node)
+        {
+            return node.IsKind(SyntaxKind.ClassDeclaration) || node.IsKind(SyntaxKind.EnumDeclaration);
         }
     }
 }
