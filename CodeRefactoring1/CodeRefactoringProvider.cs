@@ -41,10 +41,10 @@ namespace CodeRefactoring1
         {
             var semanticModel = await document.GetSemanticModelAsync(cancellationToken);
 
-            var newField = CreateFieldFromExpression(fieldName, expression, semanticModel);
-
-            INamedTypeSymbol classTypeSymbol = GetClassTypeSymbol(expression, semanticModel);
             var documentWithReplacement = ReplaceExpressionWithText(fieldName, expression, document, cancellationToken, semanticModel);
+
+            var newField = CreateFieldFromExpression(fieldName, expression, semanticModel);
+            INamedTypeSymbol classTypeSymbol = GetClassTypeSymbol(expression, semanticModel);
             return await CodeGenerator.AddFieldDeclarationAsync(documentWithReplacement.Project.Solution, classTypeSymbol, newField, cancellationToken: cancellationToken).ConfigureAwait(false);
         }
 
