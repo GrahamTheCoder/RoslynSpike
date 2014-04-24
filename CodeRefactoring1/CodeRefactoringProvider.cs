@@ -44,10 +44,17 @@ namespace CodeRefactoring1
             var newField = CreateFieldFromExpression(fieldName, expression, semanticModel);
 
             INamedTypeSymbol classTypeSymbol = GetClassTypeSymbol(expression, semanticModel);
-            var expressionReplaces = new ExpressionReplacer(semanticModel.SyntaxTree, document, semanticModel);
-            var withReplacement = expressionReplaces.WithReplacementNode(expression, fieldName, cancellationToken);
-            var documentWithReplacement = document.WithSyntaxRoot(withReplacement);
+            var documentWithReplacement = ReplaceExpressionWithText(fieldName, expression, document, cancellationToken, semanticModel);
             return await CodeGenerator.AddFieldDeclarationAsync(documentWithReplacement.Project.Solution, classTypeSymbol, newField, cancellationToken: cancellationToken).ConfigureAwait(false);
+        }
+
+        private static Document ReplaceExpressionWithText(string replacementCSharp, ExpressionSyntax expression, Document document,
+            CancellationToken cancellationToken, SemanticModel semanticModel)
+        {
+            var expressionReplaces = new ExpressionReplacer(semanticModel.SyntaxTree, document, semanticModel);
+            var withReplacement = expressionReplaces.WithReplacementNode(expression, replacementCSharp, cancellationToken);
+            var documentWithReplacement = document.WithSyntaxRoot(withReplacement);
+            return documentWithReplacement;
         }
 
         private static INamedTypeSymbol GetClassTypeSymbol(ExpressionSyntax expression, SemanticModel semanticModel)
@@ -61,7 +68,6 @@ namespace CodeRefactoring1
             IFieldSymbol newField = CodeGenerationSymbolFactory.CreateFieldSymbol(new List<AttributeData>(), Accessibility.Private, new SymbolModifiers(), expressionTypeInfo.Type, fieldName, initializer: expression);
             return newField;
         }
-
 
         private static string GetNewFieldName(string expressionText)
         {
