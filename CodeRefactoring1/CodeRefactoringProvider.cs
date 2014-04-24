@@ -23,7 +23,7 @@ namespace CodeRefactoring1
         public async Task<IEnumerable<CodeAction>> GetRefactoringsAsync(Document document, TextSpan textSpan, CancellationToken cancellationToken)
         {
             var syntaxNode = await GetCurrentNode<ExpressionSyntax>(document, textSpan, cancellationToken);
-            return syntaxNode == null ? null :  new[] { GetAction(document, syntaxNode) };
+            return syntaxNode == null ? null :  new[] { ExtractFieldAction(document, syntaxNode)};
         }
 
         private async Task<T> GetCurrentNode<T>(Document document, TextSpan textSpan, CancellationToken cancellationToken) where T : class
@@ -32,7 +32,7 @@ namespace CodeRefactoring1
             return root.FindNode(textSpan) as T;
         }
 
-        private CodeAction GetAction(Document document, ExpressionSyntax expression)
+        private CodeAction ExtractFieldAction(Document document, ExpressionSyntax expression)
         {
             return CodeAction.Create("Extract field", c => ExtractField(GetNewFieldName(expression.GetText().ToString()), expression, document, c));
         }
@@ -43,12 +43,11 @@ namespace CodeRefactoring1
 
             var newField = CreateFieldFromExpression(fieldName, expression, semanticModel);
 
-            var originalSolution = document.Project.Solution;
             INamedTypeSymbol classTypeSymbol = GetClassTypeSymbol(expression, semanticModel);
             var expressionReplaces = new ExpressionReplacer(semanticModel.SyntaxTree, document, semanticModel);
             var withReplacement = expressionReplaces.WithReplacementNode(expression, fieldName, cancellationToken);
             var documentWithReplacement = document.WithSyntaxRoot(withReplacement);
-            return await CodeGenerator.AddFieldDeclarationAsync(documentWithReplacement.Project.Solution, classTypeSymbol, newField).ConfigureAwait(false);
+            return await CodeGenerator.AddFieldDeclarationAsync(documentWithReplacement.Project.Solution, classTypeSymbol, newField, cancellationToken: cancellationToken).ConfigureAwait(false);
         }
 
         private static INamedTypeSymbol GetClassTypeSymbol(ExpressionSyntax expression, SemanticModel semanticModel)
