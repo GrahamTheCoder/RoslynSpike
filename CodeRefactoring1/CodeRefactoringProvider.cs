@@ -43,9 +43,17 @@ namespace CodeRefactoring1
 
             var documentWithReplacement = ReplaceExpressionWithText(fieldName, expression, document, cancellationToken, semanticModel);
 
+            return await WithFieldDeclarationAsync(fieldName, expression, cancellationToken, semanticModel, documentWithReplacement);
+        }
+
+        private async Task<Document> WithFieldDeclarationAsync(string fieldName, ExpressionSyntax expression,
+            CancellationToken cancellationToken, SemanticModel semanticModel, Document documentWithReplacement)
+        {
             var newField = CreateFieldFromExpression(fieldName, expression, semanticModel);
             INamedTypeSymbol classTypeSymbol = GetClassTypeSymbol(expression, semanticModel);
-            return await CodeGenerator.AddFieldDeclarationAsync(documentWithReplacement.Project.Solution, classTypeSymbol, newField, cancellationToken: cancellationToken).ConfigureAwait(false);
+            var addFieldTask = CodeGenerator.AddFieldDeclarationAsync(documentWithReplacement.Project.Solution, classTypeSymbol, newField,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
+            return await addFieldTask;
         }
 
         private static Document ReplaceExpressionWithText(string replacementCSharp, ExpressionSyntax expression, Document document,
