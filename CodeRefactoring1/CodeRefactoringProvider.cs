@@ -40,9 +40,7 @@ namespace CodeRefactoring1
         private async Task<Document> ExtractField(string fieldName, ExpressionSyntax expression, Document document, CancellationToken cancellationToken)
         {
             var semanticModel = await document.GetSemanticModelAsync(cancellationToken);
-
             var documentWithReplacement = ReplaceExpressionWithText(fieldName, expression, document, cancellationToken, semanticModel);
-
             return await WithFieldDeclarationAsync(fieldName, expression, cancellationToken, semanticModel, documentWithReplacement);
         }
 
