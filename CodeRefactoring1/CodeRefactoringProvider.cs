@@ -69,28 +69,4 @@ namespace CodeRefactoring1
             return expressionTextName.Any() ? expressionTextName : "newField";
         }
     }
-
-    public class ExpressionReplacer
-    {
-        private SyntaxTree syntaxTree;
-        private Document document;
-        private SemanticModel semanticModel;
-
-        public ExpressionReplacer(SyntaxTree syntaxTree, Document document, SemanticModel semanticModel)
-        {
-            this.syntaxTree = syntaxTree;
-            this.document = document;
-            this.semanticModel = semanticModel;
-        }
-
-        public SyntaxNode WithReplacementNode(ExpressionSyntax binaryExpression, string replaceWith, CancellationToken cancellationToken)
-        {
-            return syntaxTree.GetRoot().ReplaceNode(binaryExpression, GetNewNode(replaceWith));
-        }
-
-        private SyntaxNode GetNewNode(string replaceWith)
-        {
-            return SyntaxFactory.ParseExpression(replaceWith);
-        }
-    }
 }
