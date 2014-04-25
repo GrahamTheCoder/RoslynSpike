@@ -1,4 +1,3 @@
-using System.Threading;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -18,9 +17,14 @@ namespace CodeRefactoring1
             this.semanticModel = semanticModel;
         }
 
-        public SyntaxNode WithReplacementNode(ExpressionSyntax binaryExpression, string replaceWith, CancellationToken cancellationToken)
+        public SyntaxNode WithReplacementNode(ExpressionSyntax binaryExpression, string replaceWith)
         {
-            return syntaxTree.GetRoot().ReplaceNode(binaryExpression, GetNewNode(replaceWith));
+            return WithReplacementNode(binaryExpression, GetNewNode(replaceWith));
+        }
+
+        public SyntaxNode WithReplacementNode(ExpressionSyntax binaryExpression, SyntaxNode replaceWith)
+        {
+            return syntaxTree.GetRoot().ReplaceNode(binaryExpression, replaceWith);
         }
 
         private SyntaxNode GetNewNode(string replaceWith)
