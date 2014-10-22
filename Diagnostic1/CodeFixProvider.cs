@@ -16,7 +16,7 @@ namespace Diagnostic1
     [ExportCodeFixProvider(DiagnosticAnalyzer.DiagnosticId, LanguageNames.CSharp)]
     internal class CodeFixProvider : ICodeFixProvider
     {
-        private const bool RoslynBug857331Fixed = false;
+        private const bool RoslynBug857331Fixed = true;
 
         public IEnumerable<string> GetFixableDiagnosticIds()
         {
