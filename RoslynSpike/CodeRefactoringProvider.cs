@@ -7,11 +7,8 @@ using Microsoft.CodeAnalysis.CodeActions;
 using Microsoft.CodeAnalysis.CodeRefactorings;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Microsoft.CodeAnalysis.Rename;
 using Microsoft.CodeAnalysis.Text;
 using Microsoft.CodeAnalysis.CodeGeneration;
-using Microsoft.CodeAnalysis.CSharp.CodeGeneration;
-using System;
 
 namespace CodeRefactoring1
 {
@@ -23,18 +20,19 @@ namespace CodeRefactoring1
         public async Task<IEnumerable<CodeAction>> GetRefactoringsAsync(Document document, TextSpan textSpan, CancellationToken cancellationToken)
         {
             var syntaxNode = await GetCurrentNode<ExpressionSyntax>(document, textSpan, cancellationToken);
-            return syntaxNode == null ? null :  new[] { ExtractFieldAction(document, syntaxNode)};
+            return !syntaxNode.Any() ? null :  new[] { ExtractFieldAction(document, syntaxNode.First())};
         }
 
-        private async Task<T> GetCurrentNode<T>(Document document, TextSpan textSpan, CancellationToken cancellationToken) where T : class
+        private async Task<IEnumerable<T>> GetCurrentNode<T>(Document document, TextSpan textSpan, CancellationToken cancellationToken) where T : class
         {
             var root = await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false);
-            return root.FindNode(textSpan) as T;
+            return root.FindNode(textSpan).DescendantNodesAndSelf().OfType<T>();
         }
 
         private CodeAction ExtractFieldAction(Document document, ExpressionSyntax expression)
         {
-            return CodeAction.Create("Extract field", c => ExtractField(GetNewFieldName(expression.GetText().ToString()), expression, document, c));
+            var fieldName = GetNewFieldName(expression.GetText().ToString());
+            return CodeAction.Create("Extract field " + fieldName, c => ExtractField(fieldName, expression, document, c));
         }
 
         private async Task<Document> ExtractField(string fieldName, ExpressionSyntax expression, Document document, CancellationToken cancellationToken)
@@ -53,7 +51,7 @@ namespace CodeRefactoring1
                 cancellationToken: cancellationToken).ConfigureAwait(false);
             return await addFieldTask;
         }
-
+        
         private static Document ReplaceExpressionWithText(string replacementCSharp, ExpressionSyntax expression, Document document,
             CancellationToken cancellationToken, SemanticModel semanticModel)
         {
@@ -65,7 +63,8 @@ namespace CodeRefactoring1
 
         private static INamedTypeSymbol GetClassTypeSymbol(ExpressionSyntax expression, SemanticModel semanticModel)
         {
-            return semanticModel.GetEnclosingSymbol(expression.SpanStart).ContainingType;
+            var containingType = semanticModel.GetEnclosingSymbol(expression.SpanStart).ContainingType;
+            return containingType;
         }
 
         private IFieldSymbol CreateFieldFromExpression(string fieldName, ExpressionSyntax expression, SemanticModel semanticModel)
@@ -77,8 +76,8 @@ namespace CodeRefactoring1
 
         private static string GetNewFieldName(string expressionText)
         {
-            var expressionTextName = new String(expressionText.ToLower().Where(char.IsLetter).ToArray());
-            return expressionTextName.Any() ? expressionTextName : "newField";
+            var expressionTextName = expressionText.ToLower().Where(char.IsLetter).ToArray();
+            return expressionTextName.Any() ? new string(expressionTextName) : "newField";
         }
     }
 }

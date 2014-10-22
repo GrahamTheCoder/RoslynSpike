@@ -12,7 +12,7 @@ namespace Diagnostic1
     // TODO: Consider implementing other interfaces that implement IDiagnosticAnalyzer instead of or in addition to ISymbolAnalyzer
 
     [DiagnosticAnalyzer]
-    [ExportDiagnosticAnalyzer(DiagnosticId, LanguageNames.CSharp)]
+    //[ExportDiagnosticAnalyzer(DiagnosticId, LanguageNames.CSharp)]
     public class DiagnosticAnalyzer : ISymbolAnalyzer
     {
         internal const string DiagnosticId = "Diagnoser";
@@ -20,13 +20,13 @@ namespace Diagnostic1
         internal const string MessageFormat = "Type name '{0}' does not match filename '{1}'";
         internal const string Category = "Naming";
 
-        internal static DiagnosticDescriptor Rule = new DiagnosticDescriptor(DiagnosticId, Description, MessageFormat, Category, DiagnosticSeverity.Warning);
+        internal static DiagnosticDescriptor Rule = new DiagnosticDescriptor(DiagnosticId, Description, MessageFormat, Category, DiagnosticSeverity.Warning, true);
 
         public ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics { get { return ImmutableArray.Create(Rule); } }
 
         public ImmutableArray<SymbolKind> SymbolKindsOfInterest { get { return ImmutableArray.Create(SymbolKind.NamedType); } }
-
-        public void AnalyzeSymbol(ISymbol symbol, Compilation compilation, Action<Diagnostic> addDiagnostic, CancellationToken cancellationToken)
+        
+        public void AnalyzeSymbol(ISymbol symbol, Compilation compilation, Action<Diagnostic> addDiagnostic, AnalyzerOptions options, CancellationToken cancellationToken)
         {
             // TODO: Replace the following code with your own analysis, generating Diagnostic objects for any issues you find
 
